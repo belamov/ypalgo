@@ -3,13 +3,12 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
 )
 
-// https://contest.yandex.ru/contest/22781/run-report/80354266/ - ссылка на последнее ОК решение
+// https://contest.yandex.ru/contest/22781/run-report/80434059/ - ссылка на последнее ОК решение
 
 // https://contest.yandex.ru/contest/22781/problems/B/
 
@@ -71,8 +70,10 @@ import (
 // числами. поэтому вся последовательность обрабатывается за О(n), где n - количество операций/операндов
 //
 // -- ПРОСТРАНСТВЕННАЯ СЛОЖНОСТЬ --
-// в худшем случае в стеке будут все добавленные операнды, поэтому в стеке будет
-// потреблять О(n) памяти, где n - количество операндов
+// в стек будет добавлен каждый операнд
+// исходя из формата польской нотации n/2+1 будет операндами, а значит хранить мы будем n/2+1 операндов.
+// оценка O(n/2+1) = O(n/2)+o(1) ~ O(n/2) ~ O(n), где n - количество символов, разделенных пробелами
+//
 func calculate(input string) int {
 	commands := strings.Split(input, " ")
 	var stack *ListNode
@@ -105,7 +106,14 @@ func calculate(input string) int {
 		case "*":
 			result = firstOperand * secondOperand
 		case "/":
-			result = int(math.Floor(float64(firstOperand) / float64(secondOperand)))
+			//в этой задаче под делением понимается математическое целочисленное деление.
+			//Это значит, что округление всегда происходит вниз.
+			//А именно: если a / b = c, то b ⋅ c — это наибольшее число, которое
+			//не превосходит a и одновременно делится без остатка на b.
+			result = firstOperand / secondOperand
+			if secondOperand*result > firstOperand {
+				result--
+			}
 		}
 
 		// результат выполненной операции помещается на вершину стека

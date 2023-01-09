@@ -2,13 +2,14 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 )
 
-// https://contest.yandex.ru/contest/22781/run-report/80239858/ - ссылка на последнее ОК решение
+// https://contest.yandex.ru/contest/22781/run-report/80434035/ - ссылка на последнее ОК решение
 
 // https://contest.yandex.ru/contest/22781/problems/A/
 
@@ -27,8 +28,9 @@ import (
 // причем головной и хвостовой стеки растут в разных направлениях - head увеличивается, а tail уменьшается
 //
 // -- ВРЕМЕННАЯ СЛОЖНОСТЬ --
-// все операции происходят за О(1), поскольку мы храним индексы началов стеков, а значит просто двигаем их
+// каждая отдельная операция над деком происходит за О(1), поскольку мы храним индексы началов стеков, а значит просто двигаем их
 // простыми арифметическими операциями
+// поэтому общая временная сложность программы будет O(n), где n - количество операций в инпуте
 //
 // -- ПРОСТРАНСТВЕННАЯ СЛОЖНОСТЬ --
 // если максимальный размер стека = n, то дек будет хранить слайс размером n
@@ -65,14 +67,14 @@ func newDeque(maxSize int) *Deque {
 // теперь в head опять хранится указатель на свободный индекс в головном стеке
 //
 // также увеличиваем текущий размер дека currentSize
-func (d *Deque) pushFront(x int) {
+func (d *Deque) pushFront(x int) error {
 	if d.currentSize == d.maxSize {
-		fmt.Println("error")
-		return
+		return errors.New("превышен максимальный размер дека")
 	}
 	d.queue[d.head] = x
 	d.head = (d.head + 1) % d.maxSize
 	d.currentSize++
+	return nil
 }
 
 // pushBack добавляет элемент в конец дека, кладет элемент наверх хвостового стека
@@ -89,15 +91,14 @@ func (d *Deque) pushFront(x int) {
 // теперь в tail опять хранится указатель на последний добавленный элемент в хвостовой стек
 //
 // также увеличиваем текущий размер дека currentSize
-func (d *Deque) pushBack(x int) {
+func (d *Deque) pushBack(x int) error {
 	if d.currentSize == d.maxSize {
-		fmt.Println("error")
-		return
+		return errors.New("превышен максимальный размер дека")
 	}
 	d.tail = (d.tail - 1 + d.maxSize) % d.maxSize
 	d.queue[d.tail] = x
-
 	d.currentSize++
+	return nil
 }
 
 // popFront берет элемент с начала дека, берет элемент с вершины головного стека
@@ -114,14 +115,13 @@ func (d *Deque) pushBack(x int) {
 // теперь в head опять хранится указатель на свободный индекс в головном стеке
 //
 // также уменьшаем текущий размер дека currentSize
-func (d *Deque) popFront() {
+func (d *Deque) popFront() (int, error) {
 	if d.currentSize == 0 {
-		fmt.Println("error")
-		return
+		return 0, errors.New("нет элементов в деке")
 	}
 	d.head = (d.head - 1 + d.maxSize) % d.maxSize
-	fmt.Println(d.queue[d.head])
 	d.currentSize--
+	return d.queue[d.head], nil
 }
 
 // popBack берет элемент с конца дека, берет элемент с вершины хвостового стека
@@ -135,14 +135,14 @@ func (d *Deque) popFront() {
 // теперь в tail опять хранится указатель на последний добавленный элемент в хвостовой стек
 //
 // также уменьшаем текущий размер дека currentSize
-func (d *Deque) popBack() {
+func (d *Deque) popBack() (int, error) {
 	if d.currentSize == 0 {
-		fmt.Println("error")
-		return
+		return 0, errors.New("нет элементов в деке")
 	}
-	fmt.Println(d.queue[d.tail])
+	result := d.queue[d.tail]
 	d.tail = (d.tail + 1) % d.maxSize
 	d.currentSize--
+	return result, nil
 }
 
 func main() {
@@ -162,22 +162,38 @@ func runCommand(scanner *bufio.Scanner, queue *Deque) {
 
 	if strings.Contains(command, "push_front") {
 		arg, _ := strconv.Atoi(command[11:])
-		queue.pushFront(arg)
+		err := queue.pushFront(arg)
+		if err != nil {
+			fmt.Println("error")
+		}
 		return
 	}
 	if strings.Contains(command, "push_back") {
 		arg, _ := strconv.Atoi(command[10:])
-		queue.pushBack(arg)
+		err := queue.pushBack(arg)
+		if err != nil {
+			fmt.Println("error")
+		}
 		return
 	}
 
 	if command == "pop_front" {
-		queue.popFront()
+		result, err := queue.popFront()
+		if err != nil {
+			fmt.Println("error")
+			return
+		}
+		fmt.Println(result)
 		return
 	}
 
 	if command == "pop_back" {
-		queue.popBack()
+		result, err := queue.popBack()
+		if err != nil {
+			fmt.Println("error")
+			return
+		}
+		fmt.Println(result)
 		return
 	}
 }
