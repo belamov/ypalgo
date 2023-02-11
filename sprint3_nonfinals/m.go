@@ -10,6 +10,7 @@ import (
 )
 
 //https://contest.yandex.ru/contest/23638/problems/M/
+//https://leetcode.com/problems/median-of-two-sorted-arrays/
 
 // На каждом острове в архипелаге Алгосы живёт какое-то количество
 //людей или же остров необитаем (тогда на острове живёт 0 людей).
