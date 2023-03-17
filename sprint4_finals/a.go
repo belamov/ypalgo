@@ -8,6 +8,34 @@ import (
 	"strings"
 )
 
+//https://contest.yandex.ru/contest/24414/problems/A/
+// https://contest.yandex.ru/contest/24414/run-report/84139419/ - последнее ОК решение
+
+//Тимофей пишет свою поисковую систему.
+//Имеется n документов, каждый из которых представляет собой текст из слов.
+//По этим документам требуется построить поисковый индекс.
+//На вход системе будут подаваться запросы. Запрос —– некоторый набор слов.
+//По запросу надо вывести 5 самых релевантных документов.
+//Релевантность документа оценивается следующим образом: для каждого уникального
+//слова из запроса берётся число его вхождений в документ, полученные числа для всех слов из запроса суммируются.
+//Итоговая сумма и является релевантностью документа.
+//Чем больше сумма, тем больше документ подходит под запрос.
+//Сортировка документов на выдаче производится по убыванию релевантности.
+//Если релевантности документов совпадают —– то по возрастанию их
+//порядковых номеров в базе (то есть во входных данных).
+
+//Поисковый индекс будет иметь следующую структуру:
+// слово -> отображение(номер документа -> количество нахождений слова в документе)
+// это позволит быстро считать релевантность документов даже с большим повторением слов в документе
+// индекс строится в методе makeSearchIndex, см. комментарии в нем
+// индекс строится за O(N), где N - количество слов во всех документах
+// размер индекса будет O(N*M), где N - количество уникальных слов во всех документах,
+// M - максимальное количество повторений слова в документе
+//
+// алгоритм подсчета релевантности описан в методе searchDocuments, см. комментарии в нем
+// подсчет релевантности для запроса выполняется за О(N), где N - количество уникальных слов в запросе
+// подсчет релевантности потребляет O(N+M) памяти, где N - количество документов (при построении мапы релевантности),
+// а M - количество уникальных слов в запросе (при построении истории слов в запросе)
 func main() {
 	scanner := makeScanner()
 	n := readInt(scanner)
@@ -31,47 +59,76 @@ func main() {
 }
 
 func searchDocuments(searchIndex map[string]map[int]int, query string) []int {
+	// заведем кеш для отброса повторений слов в документе
 	wordsHistory := make(map[string]bool)
+
+	// заведем мапу для построения релевантности документов. тут отображение номер документа -> релевантность документа
 	relevance := make(map[int]int)
+
+	// разделяем запрос на отдельные слова
 	words := strings.Split(query, " ")
+
+	// для каждого слова в запросе
 	for _, word := range words {
+		// если слово уже встречалось - пропускаем его
 		if _, alreadySearched := wordsHistory[word]; alreadySearched {
 			continue
 		}
 
+		// берем из поискового индекса все документы, в которых есть данное слово
 		documentsContainingWord, wordExistsInDocuments := searchIndex[word]
 		if !wordExistsInDocuments {
 			continue
 		}
 
+		// для каждого найденного документа прибавляем к релевантности
+		// документа количество повторений данного слова в этом документе
 		for documentIndex, wordsCount := range documentsContainingWord {
 			relevance[documentIndex] += wordsCount
 		}
 
+		//запоминаем слово из запроса в кеш, чтобы не учитывать повторяющие слова
 		wordsHistory[word] = true
 	}
 
+	// нам нужны топ 5 релевантностей документов - для этого подойдет
+	// приоритетная очередь на куче, у нее есть свойство, что она всегда хранит элементы упорядоченно.
+	// если мы правильно определим метод PriorityQueue.Less, то сможем хранить элементы в убывающем порядке
+	// причем нам нужны только 5 первых элементов в этой очереди, поэтому память для этой очереди будет константна
 	pq := make(PriorityQueue, 0, 5)
-	var minElement *Item
+	var minRelevance *DocumentRelevance
 	for document, documentRelevance := range relevance {
-		if minElement != nil && (minElement.relevance == documentRelevance && minElement.document < document || minElement.relevance > documentRelevance) {
+		// если мы уже выкидывали минимальный элемент из кучи,
+		// то можем проверить заранее, что новый добавляемый элемент тоже будет выкинут - сэкономим немного
+		// времени на перестроении дерева
+		if minRelevance != nil && (minRelevance.relevance == documentRelevance && minRelevance.document < document || minRelevance.relevance > documentRelevance) {
 			continue
 		}
-		heap.Push(&pq, &Item{
+		// добавляем элемент в очередь. тут дерево перестроится, чтобы сохранить порядок элементов
+		// сложность операции - log 5
+		heap.Push(&pq, &DocumentRelevance{
 			document:  document,
 			relevance: documentRelevance,
 		})
+
+		// если мы добавили 6 элемент, то можем удалить наименьший из 6, чтобы у нас всегда было топ 5 релевантностей
+		// в этой очереди. запомним этот удаленный элемент, чтобы не добавлять в очередь элементы меньше
 		if pq.Len() > 5 {
-			minElement = heap.Pop(&pq).(*Item)
+			minRelevance = heap.Pop(&pq).(*DocumentRelevance)
 		}
 	}
 
+	// тут в приоритетной очереди у нас остались топ 5 релевантностей документов, преобразуем их в массив с
+	// номерами документов
 	relevantDocuments := make([]int, 0, 5)
-	for i := 0; pq.Len() > 0; i++ {
-		item := heap.Pop(&pq).(*Item)
+	for pq.Len() > 0 {
+		item := heap.Pop(&pq).(*DocumentRelevance)
 		relevantDocuments = append(relevantDocuments, item.document+1)
 	}
 
+	// поскольку при изъятии из очереди мы берем минимальный элемент, то в массиве они будут
+	// располагаться от меньшего к большему. а нам нужны документы по уменьшению релевантности
+	// поэтому нам нужен этот массив в обратном порядке
 	for i, j := 0, len(relevantDocuments)-1; i < j; i, j = i+1, j-1 {
 		relevantDocuments[i], relevantDocuments[j] = relevantDocuments[j], relevantDocuments[i]
 	}
@@ -80,17 +137,28 @@ func searchDocuments(searchIndex map[string]map[int]int, query string) []int {
 }
 
 func makeSearchIndex(documents []string) map[string]map[int]int {
+	//структура индекса = слово -> отображение(номер документа -> количество нахождений слова в документе)
 	index := make(map[string]map[int]int)
+
+	//переберем все документы
 	for documentIndex, document := range documents {
+		// в каждом документе возьмем все слова
 		words := strings.Split(document, " ")
+
+		// для каждого слова в документе
 		for _, word := range words {
+			// если в индексе уже есть это слово
 			if wordDocumentsMap, ok := index[word]; ok {
+				// если в индексе в этом документе уже есть слово
 				if _, ok := wordDocumentsMap[documentIndex]; ok {
+					// увеличим счетчик вхождений этого слова в документе
 					index[word][documentIndex]++
 				} else {
+					// иначе инициируем счетчик этого слова в документе
 					index[word][documentIndex] = 1
 				}
 			} else {
+				// в индексе нет этого слова, инициируем запись
 				index[word] = map[int]int{documentIndex: 1}
 			}
 		}
@@ -135,19 +203,19 @@ func printArray(writer *bufio.Writer, arr []int) {
 	}
 }
 
-// An Item is something we manage in a priority queue.
-type Item struct {
-	document  int // The value of the item; arbitrary.
-	relevance int // The priority of the item in the queue.
-	// The index is needed by update and is maintained by the heap.Interface methods.
-	index int // The index of the item in the heap.
+type DocumentRelevance struct {
+	document  int // Индекс документа
+	relevance int // Релевантность документа
+	index     int // служебное поле для позиционирования элемента в дереве
 }
 
 // A PriorityQueue implements heap.Interface and holds Items.
-type PriorityQueue []*Item
+type PriorityQueue []*DocumentRelevance
 
 func (pq PriorityQueue) Len() int { return len(pq) }
 
+//Less определяет релевантность документа согласно условию задачи
+// если релевантность равна, то меньшим является тот документ, у которого больше номер
 func (pq PriorityQueue) Less(i, j int) bool {
 	if pq[i].relevance == pq[j].relevance {
 		return pq[i].document > pq[j].document
@@ -163,7 +231,7 @@ func (pq PriorityQueue) Swap(i, j int) {
 
 func (pq *PriorityQueue) Push(x any) {
 	n := len(*pq)
-	item := x.(*Item)
+	item := x.(*DocumentRelevance)
 	item.index = n
 	*pq = append(*pq, item)
 }
