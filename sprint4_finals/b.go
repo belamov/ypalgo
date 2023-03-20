@@ -8,7 +8,7 @@ import (
 )
 
 //https://contest.yandex.ru/contest/24414/problems/B/
-// последнее ОК решение - https://contest.yandex.ru/contest/24414/run-report/84163918/
+// последнее ОК решение - https://contest.yandex.ru/contest/24414/run-report/84288379/
 
 //Тимофей, как хороший руководитель, хранит информацию о зарплатах своих
 //сотрудников в базе данных и постоянно её обновляет.
@@ -38,23 +38,32 @@ import (
 //пояснения к реализации: поскольку масштабирование не требуется, создадим сразу много бакетов, чтобы хватило для тестов
 //в качестве размера было выбрано 9371 как большое простое число.
 //для решения коллизий используется метод цепочек - в бакетах хранится массив из элементов, куда складываются
-//элементы с одинаковыми номерами бакетов. в такой реализации мы тратим чуть больше времени на получение и удаление элементов,
-//но поскольку у нас по условию количество ключей в хещ-таблице не превышает 10^5, то в каждом бакете будет
-//храниться максимум 10^5 / 9371 = 11 элементов. поэтому поиск и удаление будет занимать О(1)+О(10) на пробег по всем элементам
-//в бакете, что достаточно для прохождения тестов
+//элементы с одинаковыми номерами бакетов.
 //номер бакета (хеш ключа) определяется математическим делением по модулю ключа на размер хеш-таблицы
+
+// -- ВРЕМЕННАЯ СЛОЖНОСТЬ --
+// итоговая сложность O(N), где N - количество команд
+// каждая отдельная команда выполняется за O(1):
+// поскольку у нас по условию количество ключей в хещ-таблице не превышает 10^5, то в каждом бакете будет
+// храниться максимум 10^5 / 9371 = 11 элементов. поэтому поиск, вставка и удаление будет
+// занимать О(1) на получение бакета по ключу + О(11) на пробег по всем элементам в бакете
+//
+// -- ПРОСТРАНСТВЕННАЯ СЛОЖНОСТЬ --
+// программа будет потреблять O(M) памяти, где
+// M - количество различных добавляемых элементов
+// но при значениях M < 9371, все равно будет выделяться память на 9371 бакет
 type Element struct {
 	key   int
 	value int
 }
 
 type HashTable struct {
-	buckets [][]*Element
+	buckets [][]Element
 }
 
 func newHashTable(m int) *HashTable {
 	return &HashTable{
-		buckets: make([][]*Element, m),
+		buckets: make([][]Element, m),
 	}
 }
 
@@ -64,7 +73,7 @@ func (q *HashTable) put(key int, value int) {
 
 	// если корзина пустая, то просто добавляем элемент в массив
 	if q.buckets[bucketNumber] == nil {
-		q.buckets[bucketNumber] = []*Element{{
+		q.buckets[bucketNumber] = []Element{{
 			key:   key,
 			value: value,
 		}}
@@ -74,14 +83,14 @@ func (q *HashTable) put(key int, value int) {
 	// если в корзине уже есть элементы, то пройдемся по всем, чтобы
 	// заменить значение элемента с таким же ключом
 	for i, element := range q.buckets[bucketNumber] {
-		if element != nil && element.key == key {
+		if element.key == key {
 			q.buckets[bucketNumber][i].value = value
 			return
 		}
 	}
 
 	// тут мы убедились, что ключ элемента уникален - можем добавить его в массив
-	q.buckets[bucketNumber] = append(q.buckets[bucketNumber], &Element{
+	q.buckets[bucketNumber] = append(q.buckets[bucketNumber], Element{
 		key:   key,
 		value: value,
 	})
@@ -131,11 +140,9 @@ func (q *HashTable) delete(key int, writer *bufio.Writer) {
 			writer.WriteString(strconv.Itoa(element.value))
 			writer.WriteString("\n")
 
-			//удалим элемент из массива - сместим все элементы справа от него на один влево,
+			//удалим элемент из массива - поменяем его местами с последним элементом,
 			//а затем уменьшим размер массива на один
-			for j := i; j < len(q.buckets[bucketNumber])-1; j++ {
-				q.buckets[bucketNumber][j] = q.buckets[bucketNumber][j+1]
-			}
+			q.buckets[bucketNumber][i], q.buckets[bucketNumber][len(q.buckets[bucketNumber])-1] = q.buckets[bucketNumber][len(q.buckets[bucketNumber])-1], q.buckets[bucketNumber][i]
 			q.buckets[bucketNumber] = q.buckets[bucketNumber][:len(q.buckets[bucketNumber])-1]
 			return
 		}
@@ -159,11 +166,7 @@ func main() {
 
 }
 func mathematicalModulus(d, m int) int {
-	var res = d % m
-	if (res < 0 && m > 0) || (res > 0 && m < 0) {
-		return res + m
-	}
-	return res
+	return (d%m + m) % m
 }
 
 func runCommand(scanner *bufio.Scanner, hashTable *HashTable, writer *bufio.Writer) {
