@@ -2,13 +2,14 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"os"
 	"strconv"
 	"strings"
 )
 
 //https://contest.yandex.ru/contest/24414/problems/B/
-// последнее ОК решение - https://contest.yandex.ru/contest/24414/run-report/84288379/
+// последнее ОК решение - https://contest.yandex.ru/contest/24414/run-report/84606262/
 
 //Тимофей, как хороший руководитель, хранит информацию о зарплатах своих
 //сотрудников в базе данных и постоянно её обновляет.
@@ -17,12 +18,12 @@ import (
 //
 //Хеш-таблица должна поддерживать следующие операции:
 //
-//put key value —– добавление пары ключ-значение.
+//Put key value —– добавление пары ключ-значение.
 // Если заданный ключ уже есть в таблице, то соответствующее ему значение обновляется.
-//get key –— получение значения по ключу.
+//Get key –— получение значения по ключу.
 // Если ключа нет в таблице, то вывести «None».
 // Иначе вывести найденное значение.
-//delete key –— удаление ключа из таблицы.
+//Delete key –— удаление ключа из таблицы.
 // Если такого ключа нет, то вывести «None», иначе вывести
 // хранимое по данному ключу значение и удалить ключ.
 //В таблице хранятся уникальные ключи.
@@ -67,7 +68,7 @@ func newHashTable(m int) *HashTable {
 	}
 }
 
-func (q *HashTable) put(key int, value int) {
+func (q *HashTable) Put(key int, value int) {
 	// Вычисляем индекс корзины
 	bucketNumber := q.getBucketNumber(key)
 
@@ -96,60 +97,56 @@ func (q *HashTable) put(key int, value int) {
 	})
 }
 
-func (q *HashTable) getBucketNumber(key int) int {
-	// хеширование ключа - простое деление по модулю, поскольку ключи у нас - целые числа
-	return mathematicalModulus(key, len(q.buckets))
-}
-
-func (q *HashTable) get(key int, writer *bufio.Writer) {
+func (q *HashTable) Get(key int) (int, error) {
 	// Вычисляем индекс корзины
 	bucketNumber := q.getBucketNumber(key)
 
 	// если корзина пуста - элемента нет
 	if q.buckets[bucketNumber] == nil {
-		writer.WriteString("None\n")
-		return
+		return 0, errors.New("None")
 	}
 
 	// пройдемся по каждому элементу в корзине и найдем среди них элемент с нужным ключом
 	for _, element := range q.buckets[bucketNumber] {
 		if element.key == key {
-			writer.WriteString(strconv.Itoa(element.value))
-			writer.WriteString("\n")
-			return
+			return element.value, nil
 		}
 	}
 
 	// среди элементов в корзине ключа не найдено
-	writer.WriteString("None\n")
+	return 0, errors.New("None")
 }
 
-func (q *HashTable) delete(key int, writer *bufio.Writer) {
+func (q *HashTable) Delete(key int) (int, error) {
 	// Вычисляем индекс корзины
 	bucketNumber := q.getBucketNumber(key)
 
 	// если корзина пуста - элемента нет
 	if q.buckets[bucketNumber] == nil {
-		writer.WriteString("None\n")
-		return
+		return 0, errors.New("None")
 	}
 
 	// пройдемся по каждому элементу в корзине и найдем среди них элемент с нужным ключом
 	for i, element := range q.buckets[bucketNumber] {
 		if element.key == key {
-			writer.WriteString(strconv.Itoa(element.value))
-			writer.WriteString("\n")
+			deletedValue := element.value
 
 			//удалим элемент из массива - поменяем его местами с последним элементом,
 			//а затем уменьшим размер массива на один
 			q.buckets[bucketNumber][i], q.buckets[bucketNumber][len(q.buckets[bucketNumber])-1] = q.buckets[bucketNumber][len(q.buckets[bucketNumber])-1], q.buckets[bucketNumber][i]
 			q.buckets[bucketNumber] = q.buckets[bucketNumber][:len(q.buckets[bucketNumber])-1]
-			return
+
+			return deletedValue, nil
 		}
 	}
 
 	// элемента с заданным ключем не найдено
-	writer.WriteString("None\n")
+	return 0, errors.New("None")
+}
+
+func (q *HashTable) getBucketNumber(key int) int {
+	// хеширование ключа - простое деление по модулю, поскольку ключи у нас - целые числа
+	return mathematicalModulus(key, len(q.buckets))
 }
 
 func main() {
@@ -174,7 +171,14 @@ func runCommand(scanner *bufio.Scanner, hashTable *HashTable, writer *bufio.Writ
 
 	if strings.Contains(command, "get") {
 		key, _ := strconv.Atoi(command[4:])
-		hashTable.get(key, writer)
+		value, err := hashTable.Get(key)
+		if err != nil {
+			writer.WriteString(err.Error())
+			writer.WriteString("\n")
+			return
+		}
+		writer.WriteString(strconv.Itoa(value))
+		writer.WriteString("\n")
 		return
 	}
 
@@ -182,13 +186,20 @@ func runCommand(scanner *bufio.Scanner, hashTable *HashTable, writer *bufio.Writ
 		keyValue := strings.Split(command[4:], " ")
 		key, _ := strconv.Atoi(keyValue[0])
 		value, _ := strconv.Atoi(keyValue[1])
-		hashTable.put(key, value)
+		hashTable.Put(key, value)
 		return
 	}
 
 	if strings.Contains(command, "delete") {
 		key, _ := strconv.Atoi(command[7:])
-		hashTable.delete(key, writer)
+		value, err := hashTable.Delete(key)
+		if err != nil {
+			writer.WriteString(err.Error())
+			writer.WriteString("\n")
+			return
+		}
+		writer.WriteString(strconv.Itoa(value))
+		writer.WriteString("\n")
 		return
 	}
 
