@@ -10,7 +10,7 @@ import (
 
 //https://contest.yandex.ru/contest/24810/problems/A/
 
-// https://contest.yandex.ru/contest/24810/run-report/86794938/ - ссылка на последнее ОК решение
+// https://contest.yandex.ru/contest/24810/run-report/86796121/ - ссылка на последнее ОК решение
 
 // Тимофей решил организовать соревнование по спортивному программированию, чтобы найти талантливых стажёров.
 //Задачи подобраны, участники зарегистрированы, тесты написаны.
@@ -84,16 +84,17 @@ func (heap *Heap) push(participant *Participant) {
 }
 
 func (heap *Heap) siftUp(idx int) {
-	if idx == 0 {
-		return
-	}
+	for {
+		parentIndex := (idx - 1) / 2
 
-	parentIndex := (idx - 1) / 2
+		if parentIndex == idx || !heap.participants[parentIndex].Less(heap.participants[idx]) {
+			return
+		}
 
-	if heap.participants[parentIndex].Less(heap.participants[idx]) {
 		heap.participants[parentIndex], heap.participants[idx] = heap.participants[idx], heap.participants[parentIndex]
-		heap.siftUp(parentIndex)
+		idx = parentIndex
 	}
+
 }
 
 func (heap *Heap) pop() *Participant {
@@ -105,22 +106,26 @@ func (heap *Heap) pop() *Participant {
 }
 
 func (heap *Heap) siftDown(idx int) {
-	left := idx*2 + 1
-	right := idx*2 + 2
+	for {
+		left := idx*2 + 1
+		right := idx*2 + 2
 
-	if left >= len(heap.participants) {
-		return
-	}
+		if left >= len(heap.participants) {
+			return
+		}
 
-	idxLargest := left
+		idxLargest := left
 
-	if right < len(heap.participants) && heap.participants[left].Less(heap.participants[right]) {
-		idxLargest = right
-	}
+		if right < len(heap.participants) && heap.participants[left].Less(heap.participants[right]) {
+			idxLargest = right
+		}
 
-	if heap.participants[idx].Less(heap.participants[idxLargest]) {
+		if !heap.participants[idx].Less(heap.participants[idxLargest]) {
+			return
+		}
+
 		heap.participants[idx], heap.participants[idxLargest] = heap.participants[idxLargest], heap.participants[idx]
-		heap.siftDown(idxLargest)
+		idx = idxLargest
 	}
 }
 
