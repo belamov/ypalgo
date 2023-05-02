@@ -10,7 +10,7 @@ import (
 
 //https://contest.yandex.ru/contest/24810/problems/A/
 
-// https://contest.yandex.ru/contest/24810/run-report/86796121/ - ссылка на последнее ОК решение
+// https://contest.yandex.ru/contest/24810/run-report/86834897/ - ссылка на последнее ОК решение
 
 // Тимофей решил организовать соревнование по спортивному программированию, чтобы найти талантливых стажёров.
 //Задачи подобраны, участники зарегистрированы, тесты написаны.
@@ -64,10 +64,13 @@ func main() {
 	//создаем пустую бинарную кучу
 	participantsHeap := &Heap{participants: make([]*Participant, 0, n)}
 
-	//Вставим в неё по одному всех участников, сохраняя свойства кучи
+	//Вставим в неё по одному всех участников, не сохраняя свойства кучи
 	for i := 0; i < n; i++ {
-		participantsHeap.push(getParticipant(scanner))
+		participantsHeap.add(getParticipant(scanner))
 	}
+
+	//инициализируем кучу, чтобы в ней появились свойства кучи
+	participantsHeap.init()
 
 	for i := 0; i < n; i++ {
 		fmt.Println(participantsHeap.pop().login)
@@ -78,9 +81,21 @@ type Heap struct {
 	participants []*Participant
 }
 
+// push добавляет элемент в кучу с сохранением свойств бинарной кучи
 func (heap *Heap) push(participant *Participant) {
-	heap.participants = append(heap.participants, participant)
+	heap.add(participant)
 	heap.siftUp(len(heap.participants) - 1)
+}
+
+// add добавляет элемент в кучу без сохранения свойств бинарной кучи
+func (heap *Heap) add(participant *Participant) {
+	heap.participants = append(heap.participants, participant)
+}
+
+func (heap *Heap) init() {
+	for i := len(heap.participants)/2 - 1; i >= 0; i-- {
+		heap.siftDown(i)
+	}
 }
 
 func (heap *Heap) siftUp(idx int) {
