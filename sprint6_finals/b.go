@@ -9,7 +9,7 @@ import (
 
 //https://contest.yandex.ru/contest/25070/problems/B/
 
-// https://contest.yandex.ru/contest/25070/run-report/87391156/ - ссылка на последнее ОК решение
+//https://contest.yandex.ru/contest/25070/run-report/87476849/ - ссылка на последнее ОК решение
 
 // В стране X есть n городов, которым присвоены номера от 1 до n.
 //Столица страны имеет номер n.
@@ -101,49 +101,56 @@ func main() {
 
 func graphHasCycles(adjList [][]int) bool {
 	color := make([]int, len(adjList))
-	var stack []int
 
-	for i := 0; i < len(color); i++ {
-		if color[i] != 0 {
+	for vertex := 0; vertex < len(color); vertex++ {
+		if color[vertex] != 0 {
 			continue
 		}
 
-		stack = []int{i}
-
-		for len(stack) > 0 {
-			v := stack[len(stack)-1]     // Получаем из стека очередную вершину.
-			stack = stack[:len(stack)-1] // Удаляем вершину из стека.
-
-			if color[v] == 0 {
-				// Красим вершину в серый. И сразу кладём её обратно в стек:
-				// это позволит алгоритму позднее вспомнить обратный путь по графу.
-				color[v] = 1
-
-				stack = append(stack, v)
-				// Теперь добавляем в стек все непосещённые соседние вершины,
-				// вместо вызова рекурсии
-				for _, w := range adjList[v] { // Перебираем смежные вершины.
-					if color[w] == 0 { // Если вершина не посещена, то
-						stack = append(stack, w)
-					}
-					//Если при проверке смежных по исходящим
-					//дугам вершин очередная вершина окажется серой — цикл есть
-					if color[w] == 1 {
-						return true
-					}
-				}
-				continue
-			}
-
-			if color[v] == 1 {
-				// Серую вершину мы могли получить из стека только на обратном пути.
-				// Следовательно, её следует перекрасить в чёрный.
-				color[v] = 2
-			}
+		if componentHasCycle(adjList, vertex, color) {
+			return true
 		}
 	}
 
 	// мы прошли граф в глубину и не нашли циклов
+	return false
+}
+
+func componentHasCycle(adjList [][]int, startVertex int, color []int) bool {
+	var stack []int
+	stack = []int{startVertex}
+
+	for len(stack) > 0 {
+		v := stack[len(stack)-1]     // Получаем из стека очередную вершину.
+		stack = stack[:len(stack)-1] // Удаляем вершину из стека.
+
+		if color[v] == 0 {
+			// Красим вершину в серый. И сразу кладём её обратно в стек:
+			// это позволит алгоритму позднее вспомнить обратный путь по графу.
+			color[v] = 1
+
+			stack = append(stack, v)
+			// Теперь добавляем в стек все непосещённые соседние вершины,
+			// вместо вызова рекурсии
+			for _, w := range adjList[v] { // Перебираем смежные вершины.
+				if color[w] == 0 { // Если вершина не посещена, то
+					stack = append(stack, w)
+				}
+				//Если при проверке смежных по исходящим
+				//дугам вершин очередная вершина окажется серой — цикл есть
+				if color[w] == 1 {
+					return true
+				}
+			}
+			continue
+		}
+
+		if color[v] == 1 {
+			// Серую вершину мы могли получить из стека только на обратном пути.
+			// Следовательно, её следует перекрасить в чёрный.
+			color[v] = 2
+		}
+	}
 	return false
 }
 

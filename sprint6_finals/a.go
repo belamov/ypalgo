@@ -12,7 +12,7 @@ import (
 
 //https://contest.yandex.ru/contest/25070/problems/A/
 
-// https://contest.yandex.ru/contest/25070/run-report/87460184/ - ссылка на последнее ОК решение
+// https://contest.yandex.ru/contest/25070/run-report/87477047/ - ссылка на последнее ОК решение
 
 // Тимофей решил соединить все компьютеры в своей компании в единую сеть.
 //Для этого он придумал построить минимальное остовное дерево, чтобы эффективнее использовать ресурсы.
@@ -52,7 +52,7 @@ func main() {
 }
 
 func getMaximumSpanningTreeWeight(adjList [][]Edge) (int, error) {
-	notAddedVertices := make(map[int]bool) // Множество вершины, ещё не добавленных в остов.
+	notAddedVertices := make([]bool, len(adjList)) // Множество вершины, ещё не добавленных в остов.
 	for v := range adjList {
 		notAddedVertices[v] = true
 	}
@@ -65,23 +65,24 @@ func getMaximumSpanningTreeWeight(adjList [][]Edge) (int, error) {
 
 	for len(notAddedVertices) > 0 && edges.Len() > 0 {
 		e := heap.Pop(&edges).(Edge) //извлекаем максимальное ребро
-		_, endNotAdded := notAddedVertices[e.end]
-		if endNotAdded {
+
+		if notAddedVertices[e.end] {
 			totalWeight += e.weight
-			delete(notAddedVertices, e.end)
+			notAddedVertices[e.end] = false
 
 			// Добавляем все рёбра, которые инцидентны v, но их конец ещё не в остове.
 			for _, edge := range adjList[e.end] {
-				_, endOfEdgeNotAdded := notAddedVertices[edge.end]
-				if endOfEdgeNotAdded {
+				if notAddedVertices[edge.end] {
 					heap.Push(&edges, edge)
 				}
 			}
 		}
 	}
 
-	if len(notAddedVertices) > 0 {
-		return 0, errors.New("граф несвязный")
+	for _, vertexNotAdded := range notAddedVertices {
+		if vertexNotAdded {
+			return 0, errors.New("граф несвязный")
+		}
 	}
 
 	return totalWeight, nil
@@ -127,6 +128,11 @@ func getAdjList() [][]Edge {
 
 	for i := 0; i < m; i++ {
 		vertices := readArray(scanner)
+
+		//петли можно пропустить, они не попадут в остов
+		if vertices[0] == vertices[1] {
+			continue
+		}
 
 		adjList[vertices[0]-1] = append(adjList[vertices[0]-1], Edge{vertices[0] - 1, vertices[1] - 1, vertices[2]})
 		adjList[vertices[1]-1] = append(adjList[vertices[1]-1], Edge{vertices[1] - 1, vertices[0] - 1, vertices[2]})
