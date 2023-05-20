@@ -12,7 +12,7 @@ import (
 
 //https://contest.yandex.ru/contest/25070/problems/A/
 
-// https://contest.yandex.ru/contest/25070/run-report/87477047/ - ссылка на последнее ОК решение
+// https://contest.yandex.ru/contest/25070/run-report/87507112/ - ссылка на последнее ОК решение
 
 // Тимофей решил соединить все компьютеры в своей компании в единую сеть.
 //Для этого он придумал построить минимальное остовное дерево, чтобы эффективнее использовать ресурсы.
@@ -52,37 +52,33 @@ func main() {
 }
 
 func getMaximumSpanningTreeWeight(adjList [][]Edge) (int, error) {
-	notAddedVertices := make([]bool, len(adjList)) // Множество вершины, ещё не добавленных в остов.
-	for v := range adjList {
-		notAddedVertices[v] = true
-	}
-
+	addedVertices := make([]bool, len(adjList)) // Множество вершины, ещё не добавленных в остов.
+	addedVerticesCount := 0
 	edges := make(MaxHeap, 0) // Массив рёбер, исходящих из остовного дерева.
 	totalWeight := 0
 
 	//Берём первую попавшуюся вершину.
 	heap.Push(&edges, Edge{0, 0, 0})
 
-	for len(notAddedVertices) > 0 && edges.Len() > 0 {
+	for addedVerticesCount < len(addedVertices) && edges.Len() > 0 {
 		e := heap.Pop(&edges).(Edge) //извлекаем максимальное ребро
 
-		if notAddedVertices[e.end] {
+		if !addedVertices[e.end] {
 			totalWeight += e.weight
-			notAddedVertices[e.end] = false
+			addedVertices[e.end] = true
+			addedVerticesCount++
 
 			// Добавляем все рёбра, которые инцидентны v, но их конец ещё не в остове.
 			for _, edge := range adjList[e.end] {
-				if notAddedVertices[edge.end] {
+				if !addedVertices[edge.end] {
 					heap.Push(&edges, edge)
 				}
 			}
 		}
 	}
 
-	for _, vertexNotAdded := range notAddedVertices {
-		if vertexNotAdded {
-			return 0, errors.New("граф несвязный")
-		}
+	if addedVerticesCount < len(addedVertices) {
+		return 0, errors.New("граф несвязный")
 	}
 
 	return totalWeight, nil
