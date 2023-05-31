@@ -10,7 +10,7 @@ import (
 
 //https://contest.yandex.ru/contest/25597/problems/B/
 
-// https://contest.yandex.ru/contest/25597/run-report/87779917/ - ссылка на последнее ОК решение
+// https://contest.yandex.ru/contest/25597/run-report/87843902/ - ссылка на последнее ОК решение
 
 //На Алгосах устроили турнир по настольному теннису.
 //Гоша выиграл n партий, получив при этом некоторое количество очков за каждую из них.
