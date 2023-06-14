@@ -11,7 +11,7 @@ import (
 
 //https://contest.yandex.ru/contest/26133/problems/A/
 
-// https://contest.yandex.ru/contest/26133/run-report/88187940/ - ссылка на последнее ОК решение
+// https://contest.yandex.ru/contest/26133/run-report/88199997/ - ссылка на последнее ОК решение
 
 //Вам даны строки в запакованном виде.
 //Определим запакованную строку (ЗС) рекурсивно.
@@ -27,7 +27,8 @@ import (
 //Если ЗС D имеет вид D=AB, где A и B тоже ЗС, то f(D) = f(A) + f(B).
 //Если D=n[A], то f(D) = f(A) × n.
 
-//Сначала распакуем все строки. Каждая строка распаковывается за один проход:
+//Будем распаковывать строку и сразу формировать общий с предыдущими префикс, это позволит нам сэкономить память.
+//Каждая строка распаковывается за один проход:
 // если мы встречаем цифру, то записываем ее в стек мультипликаторов
 // если встречаем открывающую скобку, то создаем билдер строк, который будем пополнять последующими буквами
 // если встречаем букву, то записываем ее в билдер умножаемой строки. если билдера нет, то просто приписываем ее к результату
@@ -46,11 +47,20 @@ import (
 func main() {
 	scanner := makeScanner()
 	n := readInt(scanner)
-	unpackedStrings := make([]string, n)
+
+	commonPrefix := ""
 	for i := 0; i < n; i++ {
-		unpackedStrings[i] = unpackString(readString(scanner))
+		unpackedString := unpackString(readString(scanner))
+		if i == 0 {
+			commonPrefix = unpackedString
+		} else {
+			commonPrefix = longestCommonPrefix(commonPrefix, unpackedString)
+		}
+		if len(commonPrefix) == 0 {
+			return
+		}
 	}
-	fmt.Println(longestCommonPrefix(unpackedStrings))
+	fmt.Println(commonPrefix)
 }
 
 func unpackString(s string) string {
@@ -96,15 +106,13 @@ func unpackString(s string) string {
 	return result.String()
 }
 
-func longestCommonPrefix(strs []string) string {
+func longestCommonPrefix(a, b string) string {
 	var commonPrefix strings.Builder
-	for i := range strs[0] {
-		for _, str := range strs {
-			if i == len(str) || strs[0][i] != str[i] {
-				return commonPrefix.String()
-			}
+	for i := range a {
+		if i == len(b) || a[i] != b[i] {
+			return commonPrefix.String()
 		}
-		commonPrefix.WriteByte(strs[0][i])
+		commonPrefix.WriteByte(a[i])
 	}
 
 	return commonPrefix.String()

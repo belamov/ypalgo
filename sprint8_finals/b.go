@@ -9,7 +9,7 @@ import (
 
 //https://contest.yandex.ru/contest/26133/problems/B/
 
-// https://contest.yandex.ru/contest/26133/run-report/88188394/ - ссылка на последнее ОК решение
+// https://contest.yandex.ru/contest/26133/run-report/88200219/ - ссылка на последнее ОК решение
 
 //Вася готовится к экзамену по алгоритмам и на всякий случай пишет шпаргалки.
 //
@@ -78,21 +78,15 @@ func main() {
 			continue
 		}
 
-		availableBreaks := findMatchingWords(trieRoot, s[i:])
-		for _, availableBreak := range availableBreaks {
-			dp[i+availableBreak] = true
-			if i+availableBreak == len(s) {
-				fmt.Print("YES")
-				return
-			}
+		markPotentialDividers(trieRoot, s[i:], dp, i)
+
+		if dp[len(s)] {
+			fmt.Print("YES")
+			return
 		}
 	}
 
-	if dp[len(s)] {
-		fmt.Print("YES")
-	} else {
-		fmt.Print("NO")
-	}
+	fmt.Print("NO")
 }
 
 type TrieNode struct {
@@ -117,12 +111,10 @@ func addString(root *TrieNode, str string) {
 	cur.strLen = len(str)
 }
 
-func findMatchingWords(root *TrieNode, pattern string) []int {
+func markPotentialDividers(root *TrieNode, pattern string, dp []bool, cutOffset int) {
 	if len(pattern) == 0 {
-		return []int{}
+		return
 	}
-
-	results := make([]int, 0)
 
 	charFound := true
 	var cur *TrieNode
@@ -136,13 +128,11 @@ func findMatchingWords(root *TrieNode, pattern string) []int {
 			cur = next
 			charFound = true
 			if next.isTerminal {
-				results = append(results, next.strLen)
+				dp[cutOffset+next.strLen] = true
 			}
 		}
 		offset++
 	}
-
-	return results
 }
 
 func makeScanner() *bufio.Scanner {
